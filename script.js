@@ -1,10 +1,3 @@
-const API_KEY =
-  typeof OPENWEATHER_API_KEY !== "undefined"
-    ? OPENWEATHER_API_KEY
-    : "";
-
-const API_BASE = "https://api.openweathermap.org";
-
 const searchForm = document.getElementById("search-form");
 const cityInput = document.getElementById("city-input");
 const loading = document.getElementById("loading");
@@ -14,72 +7,20 @@ const forecastGrid = document.getElementById("forecast-grid");
 
 const searchButton = searchForm.querySelector("button");
 
-// Fetch JSON data and handle API errors.
-async function fetchWeatherData(url) {
-  const response = await fetch(url);
+// Request weather data securely through our Vercel backend.
+async function getWeatherData(city) {
+  const params = new URLSearchParams({ city });
+
+  const response = await fetch(`/api/weather?${params}`);
   const data = await response.json();
 
   if (!response.ok) {
-    if (response.status === 401) {
-      throw new Error("Invalid API key. Check your OpenWeatherMap configuration.");
-    }
-
-    if (response.status === 429) {
-      throw new Error("API request limit reached. Please try again later.");
-    }
-
-    if (response.status >= 500) {
-      throw new Error("The weather service is temporarily unavailable.");
-    }
-
-    throw new Error(data.message || "Unable to retrieve weather information.");
-  }
-
-  return data;
-}
-
-// Convert a city name into geographic coordinates.
-async function getCityCoordinates(city) {
-  const params = new URLSearchParams({
-    q: city,
-    limit: 1,
-    appid: API_KEY
-  });
-
-  const locations = await fetchWeatherData(
-    `${API_BASE}/geo/1.0/direct?${params}`
-  );
-
-  if (!locations.length) {
     throw new Error(
-      `We couldn't find "${city}". Check the spelling and try another city.`
+      data.message || "Unable to retrieve weather information."
     );
   }
 
-  return locations[0];
-}
-
-// Retrieve current weather and five-day forecast.
-async function getWeatherData(latitude, longitude) {
-  const params = new URLSearchParams({
-    lat: latitude,
-    lon: longitude,
-    appid: API_KEY,
-    units: "metric"
-  });
-
-  const currentUrl =
-    `${API_BASE}/data/2.5/weather?${params}`;
-
-  const forecastUrl =
-    `${API_BASE}/data/2.5/forecast?${params}`;
-
-  const [currentWeather, forecast] = await Promise.all([
-    fetchWeatherData(currentUrl),
-    fetchWeatherData(forecastUrl)
-  ]);
-
-  return { currentWeather, forecast };
+  return data;
 }
 
 // Display the current date.
@@ -257,29 +198,21 @@ function showError(message) {
 
 // Search for a city and update the dashboard.
 async function searchWeather(city) {
-  if (!API_KEY || API_KEY === "YOUR_API_KEY_HERE") {
-    showError(
-      "API key missing. Please configure your OpenWeatherMap API key in config.js."
-    );
-    return;
-  }
-
   showLoading(true);
-
   errorMessage.classList.add("hidden");
 
   try {
-    const location = await getCityCoordinates(city);
-
     const { currentWeather, forecast } =
-      await getWeatherData(location.lat, location.lon);
+      await getWeatherData(city);
 
     displayCurrentWeather(currentWeather);
     displayForecast(forecast);
 
     weatherContent.classList.remove("hidden");
   } catch (error) {
-    showError(error.message || "Something went wrong. Please try again.");
+    showError(
+      error.message || "Something went wrong. Please try again."
+    );
   } finally {
     showLoading(false);
   }

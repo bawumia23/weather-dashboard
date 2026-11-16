@@ -3,3 +3,12 @@ config.js
 Thumbs.db
 .vscode/
 .idea/
+
+# Dependencies and deployment files
+node_modules/
+.vercel/
+.env
+.env.local
+.env.*.local
+.vercel
+.env*
